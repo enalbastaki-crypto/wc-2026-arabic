@@ -246,10 +246,13 @@ export default function App() {
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans pb-20">
       <header className="bg-slate-800 p-4 shadow-md sticky top-0 z-10 border-b border-slate-700">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2 text-emerald-400">
-            <Trophy className="w-6 h-6" />
-            <h1 className="text-xl font-bold tracking-tight">توقعات المونديال 26</h1>
-          </div>
+        <div className="flex items-center gap-2 text-emerald-400">
+  <Trophy className="w-6 h-6" />
+  <div className="flex flex-col">
+    <h1 className="text-xl font-bold tracking-tight text-white leading-none">توقعات المونديال 26</h1>
+    <span className="text-[10px] text-slate-400 font-medium mt-1">برعاية الحاج عبدالله جناحي</span>
+  </div>
+</div>
           {currentProfile && (
             <div className="text-sm text-slate-400 flex items-center gap-2">
               <UserCircle className="w-5 h-5" />
