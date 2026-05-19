@@ -87,7 +87,7 @@ const BASE_MATCHES = [
   { id: "m59", order: 59, group: 'دور المجموعات - المجموعة D', date: '2026-06-26', time: '05:00', teamA: 'تركيا', teamB: 'الولايات المتحدة', isLocked: false, actualA: null, actualB: null },
   { id: "m60", order: 60, group: 'دور المجموعات - المجموعة D', date: '2026-06-26', time: '05:00', teamA: 'باراغواي', teamB: 'أستراليا', isLocked: false, actualA: null, actualB: null },
   { id: "m61", order: 61, group: 'دور المجموعات - المجموعة I', date: '2026-06-26', time: '22:00', teamA: 'النرويج', teamB: 'فرنسا', isLocked: false, actualA: null, actualB: null },
-  { id: "m62", order: 62, group: 'دور المجموعات - المجموعة I', date: '2026-06-26', time: '22:00', teamA: 'الالسنغال', teamB: 'العراق', isLocked: false, actualA: null, actualB: null },
+  { id: "m62", order: 62, group: 'دور المجموعات - المجموعة I', date: '2026-06-26', time: '22:00', teamA: 'السنغال', teamB: 'العراق', isLocked: false, actualA: null, actualB: null },
   { id: "m63", order: 63, group: 'دور المجموعات - المجموعة H', date: '2026-06-27', time: '03:00', teamA: 'الرأس الأخضر', teamB: 'السعودية', isLocked: false, actualA: null, actualB: null },
   { id: "m64", order: 64, group: 'دور المجموعات - المجموعة H', date: '2026-06-27', time: '03:00', teamA: 'أوروغواي', teamB: 'إسبانيا', isLocked: false, actualA: null, actualB: null },
   { id: "m65", order: 65, group: 'دور المجموعات - المجموعة G', date: '2026-06-27', time: '06:00', teamA: 'مصر', teamB: 'إيران', isLocked: false, actualA: null, actualB: null },
