@@ -294,8 +294,8 @@ export default function App() {
     <div dir="rtl" className="min-h-screen bg-slate-900 text-slate-100 font-sans pb-20 text-right">
       {/* هيدر التطبيق الأصلي مع دمج عبارة الرعاية الكريمة */}
       <header className="bg-slate-800 p-4 shadow-md sticky top-0 z-10 border-b border-slate-700">
-        <div className="max-w-4xl mx-auto flex justify-between items-center flex-row-reverse">
-          <div className="flex items-center gap-2 text-emerald-400 flex-row-reverse">
+      <div className="max-w-4xl mx-auto flex justify-between items-center">
+  <div className="flex items-center gap-2 text-emerald-400">
             <Trophy className="w-6 h-6" />
             <div className="flex flex-col text-right">
               <h1 className="text-xl font-bold tracking-tight text-white leading-none">توقعات المونديال 26</h1>
@@ -303,7 +303,7 @@ export default function App() {
             </div>
           </div>
           {currentProfile && (
-            <div className="text-sm text-slate-400 flex items-center gap-2 flex-row-reverse">
+            <div className="text-sm text-slate-400 flex items-center gap-2">
               <UserCircle className="w-5 h-5" />
               <span className="font-medium text-white">{currentProfile.name}</span>
               <button onClick={handleLogout} className="text-xs mr-2 text-slate-500 hover:text-white underline">خروج</button>
