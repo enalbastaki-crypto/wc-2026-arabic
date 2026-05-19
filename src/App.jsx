@@ -465,9 +465,38 @@ function AuthForms({ onLogin, existingUsers, isRegistrationLocked }) {
     </div>
   );
 }
-
 function MatchesView({ matches, predictions, profileId }) {
-  const matchesByDate = matches.reduce((acc, match) => {
+  // 1. تحديد حالة الفلتر الحالي (الافتراضي هو 'all' لإظهار الكل عند فتح التطبيق)
+  const [filterType, setFilterType] = useState('all');
+
+  // 2. معالجة وتصفية المباريات ديناميكياً حسب الفلتر المختار
+  const filteredMatches = useMemo(() => {
+    const now = new Date();
+    const localTodayStr = now.toLocaleDateString('en-CA'); // تنسيق مستقر وموحد ميلادياً "YYYY-MM-DD"
+    
+    return matches.filter(match => {
+      if (filterType === 'today') {
+        // فلتر مباريات اليوم
+        return match.date === localTodayStr;
+      }
+      
+      if (filterType === 'upcoming') {
+        // فلتر إخفاء المنتهية: دمج تاريخ المباراة ووقتها ومقارنتها بالوقت الحالي بالثانية لقفلها فوراً
+        try {
+          const matchDateTime = new Date(`${match.date}T${match.time}:00+03:00`);
+          return matchDateTime > now;
+        } catch (e) {
+          return true; 
+        }
+      }
+      
+      // الافتراضي: إظهار الكل 'all'
+      return true;
+    });
+  }, [matches, filterType]);
+
+  // 3. إعادة تقسيم المباريات المفلترة بناءً على التاريخ لعرض العناوين
+  const matchesByDate = filteredMatches.reduce((acc, match) => {
     const d = match.date || "غير محدد";
     if (!acc[d]) acc[d] = [];
     acc[d].push(match);
@@ -477,11 +506,13 @@ function MatchesView({ matches, predictions, profileId }) {
   const sortedDates = Object.keys(matchesByDate).sort((a, b) => new Date(a) - new Date(b));
 
   return (
-    <div className="space-y-6 text-right">
+    <div className="space-y-6 text-right animate-in fade-in duration-300">
+      
+      {/* قسم العناوين والوصف */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2 flex-row-reverse">
         <div className="text-right">
           <h2 className="text-xl font-bold text-white">توقعات المباريات</h2>
-          <p className="text-xs text-slate-400">عرض جميع المباريات الـ 104 بالتفصيل</p>
+          <p className="text-xs text-slate-400">عرض مباريات البطولة الـ 104 بالتفصيل</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs flex items-center gap-1 bg-slate-800 text-emerald-400 px-3 py-1.5 rounded-full border border-slate-700">
@@ -489,41 +520,86 @@ function MatchesView({ matches, predictions, profileId }) {
           </span>
         </div>
       </div>
-      
-      {sortedDates.map(date => {
-        let displayDate = date;
-        try {
-          const dObj = new Date(date);
-          if (!isNaN(dObj)) {
-            // حل التاريخ الهجري الإجباري قطعي وموحد ميلادياً
-            displayDate = new Intl.DateTimeFormat('ar-BH', { 
-              calendar: 'gregory',
-              numberingSystem: 'latn',
-              weekday: 'long', 
-              month: 'long', 
-              day: 'numeric',
-              year: 'numeric'
-            }).format(dObj);
-          }
-        } catch(e) {}
 
-        return (
-          <div key={date} className="space-y-3 text-right">
-            <h3 className="text-sm font-bold text-slate-400 bg-slate-800/50 px-3 py-2 rounded-lg inline-block border border-slate-700/50 text-right">
-              {displayDate}
-            </h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              {matchesByDate[date].map(match => {
-                const pred = predictions.find(p => p.matchId === match.id && p.profileId === profileId);
-                return <MatchCard key={match.id} match={match} userPred={pred} profileId={profileId} />;
-              })}
+      {/* شريط الفلاتر الثلاثة في أعلى صفحة المباريات */}
+      <div className="bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 flex flex-row-reverse gap-1 max-w-md ml-auto">
+        <button
+          onClick={() => setFilterType('all')}
+          className={`flex-1 text-center py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 ${
+            filterType === 'all'
+              ? 'bg-emerald-500 text-slate-950 shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+          }`}
+        >
+          إظهار الكل
+        </button>
+        
+        <button
+          onClick={() => setFilterType('today')}
+          className={`flex-1 text-center py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 ${
+            filterType === 'today'
+              ? 'bg-emerald-500 text-slate-950 shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+          }`}
+        >
+          مباريات اليوم
+        </button>
+        
+        <button
+          onClick={() => setFilterType('upcoming')}
+          className={`flex-1 text-center py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 ${
+            filterType === 'upcoming'
+              ? 'bg-emerald-500 text-slate-950 shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+          }`}
+        >
+          إخفاء المنتهية
+        </button>
+      </div>
+
+      {/* عرض التواريخ والمباريات المفلترة */}
+      {sortedDates.length === 0 ? (
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-12 text-center text-slate-400 shadow-md">
+          <CalendarDays className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+          <p className="text-base font-bold text-white">لا توجد مباريات تطابق هذا الفلتر حالياً</p>
+          <p className="text-xs text-slate-500 mt-1">اضغط على زر "إظهار الكل" لمراجعة بقية لقاءات البطولة.</p>
+        </div>
+      ) : (
+        sortedDates.map(date => {
+          let displayDate = date;
+          try {
+            const dObj = new Date(date);
+            if (!isNaN(dObj)) {
+              displayDate = new Intl.DateTimeFormat('ar-BH', { 
+                calendar: 'gregory',
+                numberingSystem: 'latn',
+                weekday: 'long', 
+                month: 'long', 
+                day: 'numeric',
+                year: 'numeric'
+              }).format(dObj);
+            }
+          } catch(e) {}
+
+          return (
+            <div key={date} className="space-y-3 text-right">
+              <h3 className="text-sm font-bold text-slate-400 bg-slate-800/50 px-3 py-2 rounded-lg inline-block border border-slate-700/50">
+                {displayDate}
+              </h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                {matchesByDate[date].map(match => {
+                  const pred = predictions.find(p => p.matchId === match.id && p.profileId === profileId);
+                  return <MatchCard key={match.id} match={match} userPred={pred} profileId={profileId} />;
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 }
+
 
 function MatchCard({ match, userPred, profileId }) {
   const [scoreA, setScoreA] = useState(userPred?.scoreA ?? '');
