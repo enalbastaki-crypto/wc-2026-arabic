@@ -466,8 +466,8 @@ function AuthForms({ onLogin, existingUsers, isRegistrationLocked }) {
   );
 }
 function MatchesView({ matches, predictions, profileId }) {
-  // 1. تحديد حالة الفلتر الحالي (الافتراضي هو 'all' لإظهار الكل عند فتح التطبيق)
-  const [filterType, setFilterType] = useState('all');
+  // 1. تحديد حالة الفلتر الحالي (الافتراضي هو 'upcoming' لإظهار الكل عند فتح التطبيق)
+  const [filterType, setFilterType] = useState('upcoming');
 
   // 2. معالجة وتصفية المباريات ديناميكياً حسب الفلتر المختار
   const filteredMatches = useMemo(() => {
