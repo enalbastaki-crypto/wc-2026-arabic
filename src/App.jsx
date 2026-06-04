@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Trophy, CalendarDays, BarChart3, Settings, Lock, Check, Save, UserCircle, Edit2, AlertCircle, Clock, LogIn, UserPlus, Trash2, ShieldAlert } from 'lucide-react';
+import { Trophy, CalendarDays, BarChart3, Settings, Lock, Check, Save, UserCircle, Edit2, AlertCircle, Clock, LogIn, UserPlus, Trash2, ShieldAlert, Eye } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -318,20 +318,23 @@ export default function App() {
         ) : (
           <div className="animate-in fade-in duration-300">
             {activeTab === 'matches' && <MatchesView matches={matches} predictions={predictions} profileId={currentProfile.profileId} />}
+            {activeTab === 'predictions' && <PredictionsView matches={matches} predictions={predictions} usersData={usersData} />}
             {activeTab === 'leaderboard' && <LeaderboardView leaderboardData={leaderboardData} settings={settings} />}
             {activeTab === 'admin' && <AdminView isAdmin={isAdmin} setIsAdmin={setIsAdmin} matches={matches} settings={settings} passcode={ADMIN_PASSCODE} usersData={usersData} predictions={predictions} />}
           </div>
         )}
       </main>
 
+
       {currentProfile && (
         <nav className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 pb-safe z-20">
-          <div className="max-w-4xl mx-auto flex justify-around flex-row-reverse">
-            <NavBtn icon={<CalendarDays className="w-6 h-6" />} label="المباريات" active={activeTab === 'matches'} onClick={() => setActiveTab('matches')} />
-            <NavBtn icon={<BarChart3 className="w-6 h-6" />} label="الترتيب" active={activeTab === 'leaderboard'} onClick={() => setActiveTab('leaderboard')} />
-            <NavBtn icon={<Settings className="w-6 h-6" />} label="الإدارة" active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} />
-          </div>
-        </nav>
+        <div className="max-w-4xl mx-auto flex justify-around">
+          <NavBtn icon={<CalendarDays className="w-6 h-6" />} label="المباريات" active={activeTab === 'matches'} onClick={() => setActiveTab('matches')} />
+          <NavBtn icon={<Eye className="w-6 h-6" />} label="التوقعات" active={activeTab === 'predictions'} onClick={() => setActiveTab('predictions')} />
+          <NavBtn icon={<BarChart3 className="w-6 h-6" />} label="الترتيب" active={activeTab === 'leaderboard'} onClick={() => setActiveTab('leaderboard')} />
+          <NavBtn icon={<Settings className="w-6 h-6" />} label="الإدارة" active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} />
+        </div>
+      </nav>
       )}
     </div>
   );
@@ -939,6 +942,87 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+function PredictionsView({ matches, predictions, usersData }) {
+  const now = new Date();
+  
+  // جلب المباريات الجارية حالياً (بدأت ولم يمر على بدايتها أكثر من ساعتين)
+  const ongoingMatches = matches.filter(match => {
+    if (!match.date || !match.time) return false;
+    try {
+      // دمج التاريخ والوقت بتوقيت البحرين (GMT+3)
+      const matchDate = new Date(`${match.date}T${match.time}:00+03:00`);
+      if (isNaN(matchDate)) return false;
+      
+      // حساب وقت انتهاء المباراة (بعد ساعتين من الانطلاق)
+      const twoHoursLater = new Date(matchDate.getTime() + (2 * 60 * 60 * 1000));
+      return now >= matchDate && now <= twoHoursLater;
+    } catch (e) { return false; }
+  });
+
+  if (ongoingMatches.length === 0) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-12 text-center text-slate-400 shadow-md">
+        <Eye className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+        <p className="text-base font-bold text-white">لا توجد مباريات جارية حالياً</p>
+        <p className="text-xs text-slate-500 mt-1">ستظهر التوقعات هنا تلقائياً عند انطلاق أي مباراة ولمدة ساعتين فقط لضمان الشفافية.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 text-right" dir="rtl">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-white">توقعات المباريات الجارية</h2>
+        <p className="text-xs text-slate-400">مرحلة الشفافية: عرض توقعات جميع المشاركين للمباريات التي تُلعب الآن.</p>
+      </div>
+      
+      {ongoingMatches.map(match => {
+        let displayDate = match.date;
+        try {
+          const dObj = new Date(match.date);
+          if (!isNaN(dObj)) {
+            displayDate = new Intl.DateTimeFormat('ar-BH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(dObj);
+          }
+        } catch(e) {}
+
+        return (
+          <div key={match.id} className="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700 mb-6">
+            <div className="bg-slate-900 p-4 border-b border-slate-700 text-center">
+              <p className="text-xs text-emerald-400 font-mono mb-1">{displayDate} - {match.time}</p>
+              <h3 className="text-lg font-bold text-white">{match.teamA} ضد {match.teamB}</h3>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-center">
+                <thead className="bg-slate-800/50 text-slate-400 font-bold border-b border-slate-700">
+                  <tr>
+                    <th className="p-3 text-right">اسم المشارك</th>
+                    <th className="p-3 text-center">{match.teamA}</th>
+                    <th className="p-3 text-center">{match.teamB}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50 text-white">
+                  {usersData.map(user => {
+                    const pred = predictions.find(p => p.profileId === user.profileId && p.matchId === match.id);
+                    const hasPred = pred && pred.scoreA !== '' && pred.scoreB !== '';
+                    
+                    return (
+                      <tr key={user.profileId} className="hover:bg-slate-700/20 transition">
+                        <td className="p-3 text-right font-medium">{user.name}</td>
+                        <td className="p-3 font-bold text-emerald-400">{hasPred ? pred.scoreA : '-'}</td>
+                        <td className="p-3 font-bold text-emerald-400">{hasPred ? pred.scoreB : '-'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
