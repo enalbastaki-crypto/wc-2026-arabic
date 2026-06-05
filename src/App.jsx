@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Trophy, CalendarDays, BarChart3, Settings, Lock, Check, Save, UserCircle, Edit2, AlertCircle, Clock, LogIn, UserPlus, Trash2, ShieldAlert, Eye } from 'lucide-react';
+import { Trophy, CalendarDays, BarChart3, Settings, Lock, Check, Save, UserCircle, Edit2, AlertCircle, Clock, LogIn, UserPlus, Trash2, ShieldAlert, Eye, Download } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -767,10 +767,59 @@ function LeaderboardView({ leaderboardData, settings }) {
 }
 
 function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData, predictions }) {
-  const [inputCode, setInputCode] = useState('');
+  const [inputCode, setInputCode] = useState('');  
   const [actualChamp, setActualChamp] = useState(settings?.actualChampion || '');
   const [editingMatchId, setEditingMatchId] = useState(null);
   const [editForm, setEditForm] = useState({ teamA: '', teamB: '', date: '', time: '', group: '' });
+
+    // دالة استخراج توقعات المباريات المنقضية إلى إكسل
+    const exportToExcel = () => {
+      // 1. جلب المباريات المنقضية فقط (التي لها نتيجة فعلية)
+      const pastMatches = matches.filter(m => m.actualA !== null && m.actualA !== undefined);
+  
+      if (pastMatches.length === 0) {
+        alert("لا توجد مباريات منقضية (مكتملة النتائج) لاستخراجها حالياً.");
+        return;
+      }
+  
+      // 2. تجهيز عناوين الأعمدة
+      const headers = ['تاريخ المباراة', 'وقت المباراة', 'فريق 1', 'ضد', 'فريق 2', 'النتيجة النهائية'];
+      usersData.forEach(user => headers.push(user.name)); // إضافة أسماء المشاركين كأعمدة
+  
+      // 3. تجهيز صفوف البيانات
+      const rows = [];
+      pastMatches.forEach(match => {
+        const row = [
+          match.date,
+          match.time,
+          match.teamA,
+          'ضد',
+          match.teamB,
+          `${match.actualA} - ${match.actualB}`
+        ];
+  
+        // جلب توقع كل مشارك لهذه المباراة
+        usersData.forEach(user => {
+          const pred = predictions.find(p => p.matchId === match.id && p.profileId === user.profileId);
+          if (pred && pred.scoreA !== '' && pred.scoreB !== '') {
+            row.push(`${pred.scoreA} - ${pred.scoreB}`);
+          } else {
+            row.push('لم يتوقع');
+          }
+        });
+        rows.push(row);
+      });
+  
+      // 4. تحويل البيانات إلى صيغة متوافقة مع إكسل (مع دعم اللغة العربية)
+      const csvContent = '\uFEFF' + [headers, ...rows].map(e => e.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', 'توقعات_المباريات_المنقضية.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -887,6 +936,19 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
           <button onClick={handleSetChampion} className="bg-emerald-500 text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-emerald-400">حفظ البطل</button>
         </div>
       </div>
+
+      {/* قسم استخراج البيانات */}
+      <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md flex justify-between items-center">
+        <div>
+          <h3 className="font-bold text-white text-sm">استخراج التوقعات (إكسل)</h3>
+          <p className="text-xs text-slate-400 mt-1">تنزيل ملف يحتوي على توقعات جميع المشاركين للمباريات المنقضية.</p>
+        </div>
+        <button onClick={exportToExcel} className="flex items-center gap-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-500 hover:text-white transition-colors">
+          <Download className="w-4 h-4" />
+          تحميل الملف
+        </button>
+      </div>
+
 
       <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md space-y-4">
         <div className="mb-2 border-b border-slate-700 pb-2 text-right">
