@@ -1000,18 +1000,23 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
               )}
               
               {!editingMatchId && (
-                <div className="flex items-center justify-between border-t border-slate-800 pt-2 mt-1 flex-row-reverse">
-                  <div className="flex items-center gap-2 flex-row-reverse">
-                    <input type="number" placeholder="أ" value={match.actualA ?? ''} onChange={(e) => handleSetScores(match.id, e.target.value, match.actualB)} className="w-12 h-9 bg-slate-800 border border-slate-600 rounded text-center font-bold text-white text-sm focus:ring-1 focus:ring-emerald-500" />
+                <div className="flex items-center justify-between border-t border-slate-800 pt-2 mt-1" dir="rtl">
+                  
+                  {/* 1. خانات الإدخال (ستظهر على اليمين) */}
+                  <div className="flex items-center gap-2" dir="ltr">
+                    <input type="number" placeholder="ب" value={match.actualB ?? ''} onChange={(e) => handleSetScores(match.id, match.actualA, e.target.value)} className="w-12 h-9 bg-slate-800 border border-slate-600 rounded text-center font-bold text-white text-sm" />
                     <span className="text-slate-500">-</span>
-                    <input type="number" placeholder="ب" value={match.actualB ?? ''} onChange={(e) => handleSetScores(match.id, match.actualA, e.target.value)} className="w-12 h-9 bg-slate-800 border border-slate-600 rounded text-center font-bold text-white text-sm focus:ring-1 focus:ring-emerald-500" />
+                    <input type="number" placeholder="أ" value={match.actualA ?? ''} onChange={(e) => handleSetScores(match.id, e.target.value, match.actualB)} className="w-12 h-9 bg-slate-800 border border-slate-600 rounded text-center font-bold text-white text-sm" />
                   </div>
 
+                  {/* 2. زر الإغلاق والفتح (سيظهر على اليسار) */}
                   <button onClick={() => handleToggleLock(match.id, match.isLocked)} className={`text-xs px-2 py-1.5 rounded w-16 font-medium transition-colors ${match.isLocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-slate-600'}`}>
                     {match.isLocked ? 'مغلق' : 'مفتوح'}
                   </button>
+                  
                 </div>
               )}
+
 
             </div>
           ))}
