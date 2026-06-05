@@ -643,7 +643,7 @@ function MatchCard({ match, userPred, profileId }) {
     setSaving(false);
   };
 
-  const isCompleted = match.actualA !== null && match.actualA !== undefined;
+  const isCompleted = match.actualA !== null && match.actualA !== undefined && !isNaN(match.actualA);
   const isPastKickoff = isMatchStarted(match.date, match.time);
   const isLockedForUser = match.isLocked || isCompleted || isPastKickoff;
 
@@ -849,8 +849,13 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
   };
 
   const handleSetScores = (matchId, sA, sB) => {
-    updateMatchSafely(matchId, { actualA: sA === '' ? null : parseInt(sA), actualB: sB === '' ? null : parseInt(sB), isLocked: true });
+    // التحقق من القيم، إذا كانت فارغة أو غير صالحة يتم تحويلها إلى null
+    const cleanA = (sA === '' || sA === null || isNaN(parseInt(sA))) ? null : parseInt(sA);
+    const cleanB = (sB === '' || sB === null || isNaN(parseInt(sB))) ? null : parseInt(sB);
+    
+    updateMatchSafely(matchId, { actualA: cleanA, actualB: cleanB });
   };
+
 
   const handleSetChampion = async () => {
     try { await setDoc(getBaseDoc('settings', 'global'), { actualChampion: actualChamp || null }, { merge: true }); }
