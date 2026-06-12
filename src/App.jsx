@@ -793,53 +793,77 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
   const [editForm, setEditForm] = useState({ teamA: '', teamB: '', date: '', time: '', group: '' });
 
   // دالة استخراج توقعات المباريات المنقضية إلى إكسل
-  const exportToExcel = () => {
-    // 1. جلب المباريات المنقضية فقط (التي لها نتيجة فعلية)
-    const pastMatches = matches.filter(m => m.actualA !== null && m.actualA !== undefined);
-
-    if (pastMatches.length === 0) {
-      alert("لا توجد مباريات منقضية (مكتملة النتائج) لاستخراجها حالياً.");
-      return;
-    }
-
-    // 2. تجهيز عناوين الأعمدة
-    const headers = ['تاريخ المباراة', 'وقت المباراة', 'فريق 1', 'ضد', 'فريق 2', 'النتيجة النهائية'];
-    usersData.forEach(user => headers.push(user.name)); // إضافة أسماء المشاركين كأعمدة
-
-    // 3. تجهيز صفوف البيانات
-    const rows = [];
-    pastMatches.forEach(match => {
-      const row = [
-        match.date,
-        match.time,
-        match.teamA,
-        'ضد',
-        match.teamB,
-        `${match.actualA} - ${match.actualB}`
-      ];
-
-      // جلب توقع كل مشارك لهذه المباراة
+    // دالة استخراج توقعات المباريات المنقضية إلى إكسل
+    const exportToExcel = () => {
+      // 1. جلب المباريات المنقضية فقط (تجاهل القيم الفارغة أو NaN)
+      const pastMatches = matches.filter(m => m.actualA !== null && m.actualA !== undefined && !isNaN(m.actualA));
+  
+      if (pastMatches.length === 0) {
+        alert("لا توجد مباريات منقضية (مكتملة النتائج) لاستخراجها حالياً.");
+        return;
+      }
+  
+      // 2. تجهيز عناوين الأعمدة (إضافة رقم المباراة وفصل نتائج الفرق وإزالة 'ضد')
+      const headers = ['رقم المباراة', 'تاريخ المباراة', 'وقت المباراة', 'فريق 1', 'فريق 2', 'نتيجة ف1', 'نتيجة ف2'];
+      
+      // تجهيز 3 أعمدة لكل مشارك
       usersData.forEach(user => {
-        const pred = predictions.find(p => p.matchId === match.id && p.profileId === user.profileId);
-        if (pred && pred.scoreA !== '' && pred.scoreB !== '') {
-          row.push(`${pred.scoreA} - ${pred.scoreB}`);
-        } else {
-          row.push('لم يتوقع');
-        }
+        headers.push(`${user.name} (ف1)`);
+        headers.push(`${user.name} (ف2)`);
+        headers.push(`${user.name} (النقاط)`);
       });
-      rows.push(row);
-    });
-
-    // 4. تحويل البيانات إلى صيغة متوافقة مع إكسل (مع دعم اللغة العربية)
-    const csvContent = '\uFEFF' + [headers, ...rows].map(e => e.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'توقعات_المباريات_المنقضية.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  
+      // 3. تجهيز صفوف البيانات
+      const rows = [];
+      pastMatches.forEach(match => {
+        const row = [
+          match.order,        // رقم المباراة
+          match.date,
+          match.time,
+          match.teamA,
+          match.teamB,
+          match.actualA,     // النتيجة الفعلية لفريق 1
+          match.actualB      // النتيجة الفعلية لفريق 2
+        ];
+  
+        // جلب توقع كل مشارك لهذه المباراة وحساب النقاط
+        usersData.forEach(user => {
+          const pred = predictions.find(p => p.matchId === match.id && p.profileId === user.profileId);
+          
+          if (pred && pred.scoreA !== '' && pred.scoreB !== '') {
+            const pA = parseInt(pred.scoreA);
+            const pB = parseInt(pred.scoreB);
+            const aA = parseInt(match.actualA);
+            const aB = parseInt(match.actualB);
+            
+            // حساب نقاط المشارك في هذه المباراة تحديداً
+            let points = 0;
+            if (pA === aA && pB === aB) {
+              points = 3; // تطابق تام
+            } else if ((pA > pB && aA > aB) || (pA < pB && aA < aB) || (pA === pB && aA === aB)) {
+              points = 1; // توقع الفائز أو التعادل بشكل صحيح
+            }
+            
+            row.push(pA, pB, points);
+          } else {
+            // في حال لم يقم بإدخال توقع
+            row.push('-', '-', 0);
+          }
+        });
+        rows.push(row);
+      });
+  
+      // 4. تحويل البيانات إلى صيغة متوافقة مع إكسل (مع دعم اللغة العربية)
+      const csvContent = '\uFEFF' + [headers, ...rows].map(e => e.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', 'توقعات_المباريات_المنقضية.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+  
 
 
   const handleLogin = (e) => {
