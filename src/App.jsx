@@ -795,8 +795,9 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
   // دالة استخراج توقعات المباريات المنقضية إلى إكسل
     // دالة استخراج توقعات المباريات المنقضية إلى إكسل
   // دالة استخراج توقعات المباريات المنقضية إلى إكسل
+  // دالة استخراج توقعات المباريات المنقضية إلى إكسل
   const exportToExcel = () => {
-    // 1. جلب المباريات المنقضية فقط (تجاهل القيم الفارغة أو NaN)
+    // 1. جلب المباريات المنقضية فقط
     const pastMatches = matches.filter(m => m.actualA !== null && m.actualA !== undefined && !isNaN(m.actualA));
 
     if (pastMatches.length === 0) {
@@ -804,31 +805,29 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
       return;
     }
 
-    // 2. تجهيز عناوين الأعمدة (إضافة رقم ووصف المباراة وفصل نتائج الفرق)
+    // 2. تجهيز عناوين الأعمدة
     const headers = ['رقم المباراة', 'وصف المباراة', 'تاريخ المباراة', 'وقت المباراة', 'فريق 1', 'فريق 2', 'نتيجة ف1', 'نتيجة ف2'];
     
-    // تجهيز 3 أعمدة لكل مشارك
     usersData.forEach(user => {
       headers.push(`${user.name} (ف1)`);
       headers.push(`${user.name} (ف2)`);
       headers.push(`${user.name} (النقاط)`);
     });
 
-    // 3. تجهيز صفوف البيانات
+    // 3. تجهيز صفوف المباريات
     const rows = [];
     pastMatches.forEach(match => {
       const row = [
-        match.order,        // رقم المباراة
-        match.group,        // وصف المباراة (دور المجموعات، دور الـ32، إلخ)
-        match.date,         // تاريخ المباراة
-        match.time,         // وقت المباراة
-        match.teamA,        // اسم فريق 1
-        match.teamB,        // اسم فريق 2
-        match.actualA,      // النتيجة الفعلية لفريق 1
-        match.actualB       // النتيجة الفعلية لفريق 2
+        match.order,
+        match.group,
+        match.date,
+        match.time,
+        match.teamA,
+        match.teamB,
+        match.actualA,
+        match.actualB
       ];
 
-      // جلب توقع كل مشارك لهذه المباراة وحساب النقاط
       usersData.forEach(user => {
         const pred = predictions.find(p => p.matchId === match.id && p.profileId === user.profileId);
         
@@ -838,24 +837,53 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
           const aA = parseInt(match.actualA);
           const aB = parseInt(match.actualB);
           
-          // حساب نقاط المشارك في هذه المباراة تحديداً
           let points = 0;
           if (pA === aA && pB === aB) {
-            points = 3; // تطابق تام
+            points = 3;
           } else if ((pA > pB && aA > aB) || (pA < pB && aA < aB) || (pA === pB && aA === aB)) {
-            points = 1; // توقع الفائز أو التعادل بشكل صحيح
+            points = 1;
           }
           
           row.push(pA, pB, points);
         } else {
-          // في حال لم يقم بإدخال توقع
-          row.push('-', '-', 0);
+          row.push('لم يتوقع', 'لم يتوقع', 0);
         }
       });
       rows.push(row);
     });
 
-    // 4. تحويل البيانات إلى صيغة متوافقة مع إكسل (مع دعم اللغة العربية)
+    // 4. --- إضافة صف خاص ببطل كأس العالم (إذا تم تحديده) ---
+    if (settings && settings.actualChampion) {
+      const champRow = [
+        '', // رقم المباراة (خالي)
+        'بطل كأس العالم 2026', // وصف المباراة
+        '', // تاريخ
+        '', // وقت
+        '', // فريق 1
+        '', // فريق 2
+        settings.actualChampion, // البطل الفعلي (تحت نتيجة ف1)
+        ''  // نتيجة ف2 (خالي)
+      ];
+
+      usersData.forEach(user => {
+        // حساب نقاط توقع البطل لهذا المشارك
+        let champPoints = 0;
+        if (user.champion1 === settings.actualChampion) champPoints = 10;
+        else if (user.champion2 === settings.actualChampion) champPoints = 7;
+        else if (user.champion3 === settings.actualChampion) champPoints = 5;
+
+        // عرض اختيارات المشارك الثلاثة لتوثيقها
+        const userChoices = `${user.champion1} / ${user.champion2} / ${user.champion3}`;
+
+        champRow.push(userChoices);  // توقعات المشارك تحت عمود (ف1)
+        champRow.push('');           // عمود (ف2) خالي
+        champRow.push(champPoints);  // النقاط المكتسبة
+      });
+
+      rows.push(champRow);
+    }
+
+    // 5. تحويل البيانات وتنزيل الملف
     const csvContent = '\uFEFF' + [headers, ...rows].map(e => e.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -865,6 +893,7 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
     link.click();
     document.body.removeChild(link);
   };
+
 
   
 
