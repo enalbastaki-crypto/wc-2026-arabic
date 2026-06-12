@@ -684,7 +684,15 @@ function MatchCard({ match, userPred, profileId }) {
       <div className="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center h-10 flex-row-reverse">
         {isCompleted ? (
           <div className="w-full flex justify-between items-center flex-row-reverse">
-            <span className="text-sm font-medium text-slate-400">النتيجة: <span className="text-white font-bold">{match.actualA} - {match.actualB}</span></span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-400">النتيجة:</span>
+              <div className="flex items-center gap-1.5 text-white font-bold" dir="ltr">
+                <span className="w-4 text-center">{match.actualA}</span>
+                <span className="text-slate-500">-</span>
+                <span className="w-4 text-center">{match.actualB}</span>
+              </div>
+            </div>
+
             {earnedPoints !== null && (
               <span className={`text-sm font-bold px-2 py-1 rounded ${earnedPoints === 3 ? 'bg-emerald-500/20 text-emerald-400' : earnedPoints === 1 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400'}`}>
                 +{earnedPoints} نقطة
