@@ -765,40 +765,52 @@ function MatchCard({ match, userPred, profileId }) {
         </div>
       )}
 
-      <div className="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center h-10">
+<div className="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center h-10">
         {isCompleted ? (
           <div className="w-full flex justify-between items-center">
+            {/* القسم الأيمن: النقاط المكتسبة */}
+            <div>
+              {earnedPoints !== null && (
+                <span className={`text-sm font-bold px-2 py-1 rounded ${earnedPoints === 3 ? 'bg-emerald-500/20 text-emerald-400' : earnedPoints === 1 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400'}`}>
+                  +{earnedPoints} نقطة
+                </span>
+              )}
+            </div>
+
+            {/* القسم الأيسر: النتيجة النهائية */}
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-slate-400">النتيجة:</span>
               {match.isPk ? (
                 <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded font-bold">ركلات ترجيح (فاز {match.pkWinner === 'A' ? match.teamA : match.teamB})</span>
               ) : (
                 <div className="flex items-center gap-1.5 text-white font-bold" dir="ltr">
-                  <span className="w-4 text-center">{match.actualA}</span>
-                  <span className="text-slate-500">-</span>
                   <span className="w-4 text-center">{match.actualB}</span>
+                  <span className="text-slate-500">-</span>
+                  <span className="w-4 text-center">{match.actualA}</span>
                 </div>
               )}
             </div>
-            {earnedPoints !== null && (
-              <span className={`text-sm font-bold px-2 py-1 rounded ${earnedPoints === 3 ? 'bg-emerald-500/20 text-emerald-400' : earnedPoints === 1 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400'}`}>
-                +{earnedPoints} نقطة
-              </span>
-            )}
+
           </div>
         ) : (
           <div className="w-full flex justify-between items-center">
-             {(match.isLocked || isPastKickoff) ? (
-               <span className="text-sm text-yellow-500 flex items-center gap-1"><Lock className="w-4 h-4"/> مغلق</span>
-             ) : (
-               <span className="text-xs text-slate-500">بانتظار البداية</span>
-             )}
-             
-             {!isLockedForUser && (
-               <button onClick={handleSave} disabled={saving || !hasChanges} className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-bold transition ${saved ? 'bg-emerald-500/20 text-emerald-400' : hasChanges ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
-                 {saving ? 'جاري الحفظ...' : saved ? <><Check className="w-4 h-4"/> تم الحفظ</> : <><Save className="w-4 h-4"/> حفظ</>}
-               </button>
-             )}
+             {/* القسم الأيمن: زر الحفظ */}
+             <div>
+               {!isLockedForUser && (
+                 <button onClick={handleSave} disabled={saving || !hasChanges} className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-bold transition ${saved ? 'bg-emerald-500/20 text-emerald-400' : hasChanges ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
+                   {saving ? 'جاري الحفظ...' : saved ? <><Check className="w-4 h-4"/> تم الحفظ</> : <><Save className="w-4 h-4"/> حفظ</>}
+                 </button>
+               )}
+             </div>
+
+             {/* القسم الأيسر: حالة المباراة (بانتظار البداية / مغلق) */}
+             <div>
+               {(match.isLocked || isPastKickoff) ? (
+                 <span className="text-sm text-yellow-500 flex items-center gap-1"><Lock className="w-4 h-4"/> مغلق</span>
+               ) : (
+                 <span className="text-xs text-slate-500">بانتظار البداية</span>
+               )}
+             </div>
           </div>
         )}
       </div>
