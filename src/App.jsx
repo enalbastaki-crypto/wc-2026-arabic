@@ -667,8 +667,9 @@ function MatchCard({ match, userPred, profileId }) {
     setPkWinner(userPred?.pkWinner ?? '');
   }, [userPred]);
 
+  // إضافة (??) للتحقق من القيم الفارغة لركلات الترجيح لمنع إضاءة زر الحفظ بشكل خاطئ
   const hasChanges = isKnockout 
-    ? (userPred?.isPk !== isPk || userPred?.pkWinner !== pkWinner || (userPred?.scoreA ?? '') !== scoreA || (userPred?.scoreB ?? '') !== scoreB)
+    ? ((userPred?.isPk ?? false) !== isPk || (userPred?.pkWinner ?? '') !== pkWinner || (userPred?.scoreA ?? '') !== scoreA || (userPred?.scoreB ?? '') !== scoreB)
     : ((userPred?.scoreA ?? '') !== scoreA || (userPred?.scoreB ?? '') !== scoreB);
 
   const handleSave = async () => {
@@ -709,7 +710,6 @@ function MatchCard({ match, userPred, profileId }) {
 
   let earnedPoints = null;
   if (isCompleted && userPred) {
-    // حساب النقاط الظاهرة على البطاقة
     const actualWinner = match.isPk ? match.pkWinner : (parseInt(match.actualA) > parseInt(match.actualB) ? 'A' : 'B');
     const predWinner = userPred.isPk ? userPred.pkWinner : (parseInt(userPred.scoreA) > parseInt(userPred.scoreB) ? 'A' : 'B');
     
@@ -733,7 +733,6 @@ function MatchCard({ match, userPred, profileId }) {
         <span className="font-mono">{match.time}</span>
       </div>
 
-      {/* خيار ركلات الترجيح للأدوار الاقصائية فقط */}
       {isKnockout && !isCompleted && (
         <label className="flex items-center gap-2 mb-3 bg-slate-900/50 p-2 rounded-lg cursor-pointer border border-slate-700/50 select-none w-fit mr-auto">
           <input type="checkbox" checked={isPk} disabled={isLockedForUser} onChange={(e) => { setIsPk(e.target.checked); if(!e.target.checked) setPkWinner(''); }} className="accent-emerald-500 rounded" />
@@ -742,7 +741,6 @@ function MatchCard({ match, userPred, profileId }) {
       )}
 
       {isPk ? (
-        /* واجهة اختيار الفائز بركلات الترجيح */
         <div className="bg-slate-900/60 p-3 rounded-lg border border-emerald-500/20 text-center my-2">
           <p className="text-xs text-slate-400 mb-2">اختر الفريق المتأهل بركلات الترجيح:</p>
           <div className="flex justify-center gap-3">
@@ -751,7 +749,6 @@ function MatchCard({ match, userPred, profileId }) {
           </div>
         </div>
       ) : (
-        /* واجهة إدخال الأهداف العادية */
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1 text-center min-w-0">
             <div className="font-bold text-sm sm:text-base text-white mb-2 truncate px-1">{match.teamA}</div>
@@ -765,10 +762,10 @@ function MatchCard({ match, userPred, profileId }) {
         </div>
       )}
 
-<div className="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center h-10">
+      <div className="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center h-10">
         {isCompleted ? (
           <div className="w-full flex justify-between items-center">
-            {/* القسم الأيمن: النقاط المكتسبة */}
+            {/* القسم الأيمن: النقاط */}
             <div>
               {earnedPoints !== null && (
                 <span className={`text-sm font-bold px-2 py-1 rounded ${earnedPoints === 3 ? 'bg-emerald-500/20 text-emerald-400' : earnedPoints === 1 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400'}`}>
@@ -790,7 +787,6 @@ function MatchCard({ match, userPred, profileId }) {
                 </div>
               )}
             </div>
-
           </div>
         ) : (
           <div className="w-full flex justify-between items-center">
@@ -803,7 +799,7 @@ function MatchCard({ match, userPred, profileId }) {
                )}
              </div>
 
-             {/* القسم الأيسر: حالة المباراة (بانتظار البداية / مغلق) */}
+             {/* القسم الأيسر: حالة المباراة */}
              <div>
                {(match.isLocked || isPastKickoff) ? (
                  <span className="text-sm text-yellow-500 flex items-center gap-1"><Lock className="w-4 h-4"/> مغلق</span>
@@ -817,6 +813,7 @@ function MatchCard({ match, userPred, profileId }) {
     </div>
   );
 }
+
 
 
 function LeaderboardView({ leaderboardData, settings }) {
