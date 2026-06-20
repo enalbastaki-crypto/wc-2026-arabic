@@ -710,21 +710,28 @@ function MatchCard({ match, userPred, profileId }) {
 
   let earnedPoints = null;
   if (isCompleted && userPred) {
-    const actualWinner = match.isPk ? match.pkWinner : (parseInt(match.actualA) > parseInt(match.actualB) ? 'A' : 'B');
-    const predWinner = userPred.isPk ? userPred.pkWinner : (parseInt(userPred.scoreA) > parseInt(userPred.scoreB) ? 'A' : 'B');
-    
     if (!match.isPk && !userPred.isPk) {
-      if (parseInt(userPred.scoreA) === parseInt(match.actualA) && parseInt(userPred.scoreB) === parseInt(match.actualB)) earnedPoints = 3;
-      else if (actualWinner === predWinner) earnedPoints = 1;
+      // 1. كلاهما توقع مباراة عادية (ينطبق بشكل أساسي على دور المجموعات)
+      const pA = parseInt(userPred.scoreA); const pB = parseInt(userPred.scoreB);
+      const aA = parseInt(match.actualA); const aB = parseInt(match.actualB);
+      
+      if (pA === aA && pB === aB) earnedPoints = 3;
+      else if ((pA > pB && aA > aB) || (pA < pB && aA < aB) || (pA === pB && aA === aB)) earnedPoints = 1;
       else earnedPoints = 0;
     } else if (match.isPk && userPred.isPk) {
+      // 2. كلاهما توقع ركلات ترجيح
       if (match.pkWinner === userPred.pkWinner) earnedPoints = 3;
       else earnedPoints = 0;
     } else {
+      // 3. أحدهما توقع ركلات ترجيح والآخر نتيجة عادية (في الأدوار الإقصائية)
+      const actualWinner = match.isPk ? match.pkWinner : (parseInt(match.actualA) > parseInt(match.actualB) ? 'A' : 'B');
+      const predWinner = userPred.isPk ? userPred.pkWinner : (parseInt(userPred.scoreA) > parseInt(userPred.scoreB) ? 'A' : 'B');
+      
       if (actualWinner === predWinner) earnedPoints = 1;
       else earnedPoints = 0;
     }
   }
+
 
   return (
     <div className={`bg-slate-800 rounded-xl p-4 shadow-sm border text-right ${isCompleted ? 'border-slate-600/50 opacity-80' : 'border-slate-700'}`}>
@@ -927,15 +934,20 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
             const winnerName = pred.pkWinner === 'A' ? match.teamA : match.teamB;
             row.push('ترجيح', winnerName, (match.isPk && match.pkWinner === pred.pkWinner) ? 3 : ( (!match.isPk && ((parseInt(match.actualA) > parseInt(match.actualB) && pred.pkWinner === 'A') || (parseInt(match.actualB) > parseInt(match.actualA) && pred.pkWinner === 'B'))) ? 1 : 0 ));
           } else if (pred.scoreA !== '' && pred.scoreB !== '' && pred.scoreA !== undefined) {
+            // توقع المشارك كان بأهداف عادية
             const pA = parseInt(pred.scoreA); const pB = parseInt(pred.scoreB);
-            const aA = match.isPk ? 0 : parseInt(match.actualA); const aB = match.isPk ? 0 : parseInt(match.actualB);
+            const aA = parseInt(match.actualA); const aB = parseInt(match.actualB);
             
             let points = 0;
-            const actualWinner = match.isPk ? match.pkWinner : (aA > aB ? 'A' : 'B');
-            const predWinner = pA > pB ? 'A' : 'B';
-
-            if (!match.isPk && pA === aA && pB === aB) points = 3;
-            else if (actualWinner === predWinner) points = 1;
+            if (!match.isPk) {
+              // المباراة انتهت بأهداف عادية
+              if (pA === aA && pB === aB) points = 3;
+              else if ((pA > pB && aA > aB) || (pA < pB && aA < aB) || (pA === pB && aA === aB)) points = 1;
+            } else {
+              // المباراة انتهت بركلات ترجيح ولكن توقع المشارك كان بأهداف عادية
+              const predWinner = pA > pB ? 'A' : (pA < pB ? 'B' : 'D');
+              if (match.pkWinner === predWinner) points = 1;
+            }
 
             row.push(pA, pB, points);
           } else {
