@@ -1224,101 +1224,138 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
 }
 
 function PredictionsView({ matches, predictions, usersData }) {
+  // حالة (State) لحفظ المباراة المختارة من القائمة
+  const [selectedMatchId, setSelectedMatchId] = useState('');
+  
   const now = new Date();
   
-  // تصفية المباريات الجارية (التي بدأت ولم يمر عليها ساعتان)
-  const ongoingMatches = matches.filter(match => {
+  // 1. تصفية المباريات التي بدأت خلال آخر 12 ساعة
+  const recentMatches = matches.filter(match => {
     if (!match.date || !match.time) return false;
     try {
       const matchDate = new Date(`${match.date}T${match.time}:00+03:00`);
       if (isNaN(matchDate)) return false;
       
-      const twoHoursLater = new Date(matchDate.getTime() + (2 * 60 * 60 * 1000));
-      return now >= matchDate && now <= twoHoursLater;
+      // تغيير المدة لتصبح 12 ساعة بدلاً من ساعتين
+      const twelveHoursLater = new Date(matchDate.getTime() + (12 * 60 * 60 * 1000));
+      return now >= matchDate && now <= twelveHoursLater;
     } catch (e) { return false; }
+  }).sort((a, b) => {
+    // 2. الترتيب من الأحدث (المباراة التي بدأت مؤخراً) إلى الأقدم
+    const dateA = new Date(`${a.date}T${a.time}:00+03:00`).getTime();
+    const dateB = new Date(`${b.date}T${b.time}:00+03:00`).getTime();
+    return dateB - dateA; 
   });
 
-  if (ongoingMatches.length === 0) {
+  // 3. اختيار أحدث مباراة بشكل افتراضي عند تحميل الصفحة
+  useEffect(() => {
+    if (recentMatches.length > 0) {
+      if (!selectedMatchId || !recentMatches.find(m => m.id === selectedMatchId)) {
+        setSelectedMatchId(recentMatches[0].id);
+      }
+    }
+  }, [recentMatches, selectedMatchId]);
+
+  // في حال لم تكن هناك أي مباريات ضمن نطاق الـ 12 ساعة
+  if (recentMatches.length === 0) {
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-12 text-center text-slate-400 shadow-md">
         <Eye className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-        <p className="text-base font-bold text-white">لا توجد مباريات جارية حالياً</p>
-        <p className="text-xs text-slate-500 mt-1">ستظهر توقعات جميع المشاركين هنا تلقائياً فور انطلاق أي مباراة ولمدة ساعتين لضمان الشفافية.</p>
+        <p className="text-base font-bold text-white">لا توجد مباريات بدأت خلال الـ 12 ساعة الماضية</p>
+        <p className="text-xs text-slate-500 mt-1">ستظهر توقعات جميع المشاركين هنا للمباريات الجارية والمنتهية حديثاً لضمان الشفافية.</p>
       </div>
     );
   }
 
+  // المباراة التي سيتم عرض جدولها حالياً
+  const selectedMatch = recentMatches.find(m => m.id === selectedMatchId) || recentMatches[0];
+  
+  let displayDate = selectedMatch.date;
+  try {
+    const dObj = new Date(selectedMatch.date);
+    if (!isNaN(dObj)) {
+      displayDate = new Intl.DateTimeFormat('ar-BH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(dObj);
+    }
+  } catch(e) {}
+
   return (
     <div className="space-y-6 text-right" dir="rtl">
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-white">توقعات المباريات الجارية</h2>
-        <p className="text-xs text-slate-400">مرحلة الشفافية: يمكنك هنا رؤية توقعات الجميع للمباريات التي تُلعب الآن.</p>
+        <h2 className="text-xl font-bold text-white">شفافية التوقعات</h2>
+        <p className="text-xs text-slate-400">يمكنك هنا رؤية توقعات الجميع للمباريات التي بدأت خلال آخر 12 ساعة.</p>
+      </div>
+
+      {/* 4. القائمة المنسدلة لاختيار المباراة */}
+      <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
+        <label className="block text-sm font-bold text-slate-400 mb-2">اختر المباراة لمشاهدة التوقعات:</label>
+        <select 
+          value={selectedMatchId} 
+          onChange={(e) => setSelectedMatchId(e.target.value)}
+          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-3 text-white outline-none focus:border-emerald-500 text-sm font-bold cursor-pointer"
+        >
+          {recentMatches.map(m => (
+            <option key={m.id} value={m.id}>
+              {m.teamA} ضد {m.teamB}
+            </option>
+          ))}
+        </select>
       </div>
       
-      {ongoingMatches.map(match => {
-        let displayDate = match.date;
-        try {
-          const dObj = new Date(match.date);
-          if (!isNaN(dObj)) {
-            displayDate = new Intl.DateTimeFormat('ar-BH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(dObj);
-          }
-        } catch(e) {}
-
-        return (
-          <div key={match.id} className="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700 mb-6">
-            <div className="bg-slate-900 p-4 border-b border-slate-700 text-center">
-              <p className="text-xs text-emerald-400 font-mono mb-1">{displayDate} - {match.time}</p>
-              <h3 className="text-lg font-bold text-white">{match.teamA} ضد {match.teamB}</h3>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-center">
-                <thead className="bg-slate-800/50 text-slate-400 font-bold border-b border-slate-700">
-                  <tr>
-                    <th className="p-3 text-right">اسم المشارك</th>
-                    <th className="p-3 text-center">{match.teamA}</th>
-                    <th className="p-3 text-center">{match.teamB}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700/50 text-white">
-                  {usersData.map(user => {
-                    const pred = predictions.find(p => p.profileId === user.profileId && p.matchId === match.id);
-                    
-                    // حالات العرض المختلفة بناءً على نوع التوقع
-                    let displayA = '-';
-                    let displayB = '-';
-                    let isPkText = false;
-
-                    if (pred) {
-                      if (pred.isPk) {
-                        isPkText = true;
-                        displayA = pred.pkWinner === 'A' ? 'متأهل (ترجيح)' : 'خسارة';
-                        displayB = pred.pkWinner === 'B' ? 'متأهل (ترجيح)' : 'خسارة';
-                      } else if (pred.scoreA !== '' && pred.scoreB !== '' && pred.scoreA !== undefined) {
-                        displayA = pred.scoreA;
-                        displayB = pred.scoreB;
-                      }
-                    }
-                    
-                    return (
-                      <tr key={user.profileId} className="hover:bg-slate-700/20 transition">
-                        <td className="p-3 text-right font-medium">{user.name}</td>
-                        <td className={`p-3 font-bold ${isPkText ? (pred?.pkWinner === 'A' ? 'text-emerald-400 text-xs' : 'text-slate-500 text-xs') : 'text-emerald-400'}`}>
-                          {displayA}
-                        </td>
-                        <td className={`p-3 font-bold ${isPkText ? (pred?.pkWinner === 'B' ? 'text-emerald-400 text-xs' : 'text-slate-500 text-xs') : 'text-emerald-400'}`}>
-                          {displayB}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+      {/* 5. جدول المباراة المختارة فقط */}
+      {selectedMatch && (
+        <div className="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700 mb-6">
+          <div className="bg-slate-900 p-4 border-b border-slate-700 text-center">
+            <p className="text-xs text-emerald-400 font-mono mb-1">{displayDate} - {selectedMatch.time} • {selectedMatch.group}</p>
+            <h3 className="text-lg font-bold text-white">{selectedMatch.teamA} ضد {selectedMatch.teamB}</h3>
           </div>
-        );
-      })}
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-center">
+              <thead className="bg-slate-800/50 text-slate-400 font-bold border-b border-slate-700">
+                <tr>
+                  <th className="p-3 text-right">اسم المشارك</th>
+                  <th className="p-3 text-center">{selectedMatch.teamA}</th>
+                  <th className="p-3 text-center">{selectedMatch.teamB}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/50 text-white">
+                {usersData.map(user => {
+                  const pred = predictions.find(p => p.profileId === user.profileId && p.matchId === selectedMatch.id);
+                  
+                  let displayA = '-';
+                  let displayB = '-';
+                  let isPkText = false;
+
+                  if (pred) {
+                    if (pred.isPk) {
+                      isPkText = true;
+                      displayA = pred.pkWinner === 'A' ? 'متأهل (ترجيح)' : 'خسارة';
+                      displayB = pred.pkWinner === 'B' ? 'متأهل (ترجيح)' : 'خسارة';
+                    } else if (pred.scoreA !== '' && pred.scoreB !== '' && pred.scoreA !== undefined) {
+                      displayA = pred.scoreA;
+                      displayB = pred.scoreB;
+                    }
+                  }
+                  
+                  return (
+                    <tr key={user.profileId} className="hover:bg-slate-700/20 transition">
+                      <td className="p-3 text-right font-medium">{user.name}</td>
+                      <td className={`p-3 font-bold ${isPkText ? (pred?.pkWinner === 'A' ? 'text-emerald-400 text-xs' : 'text-slate-500 text-xs') : 'text-emerald-400'}`}>
+                        {displayA}
+                      </td>
+                      <td className={`p-3 font-bold ${isPkText ? (pred?.pkWinner === 'B' ? 'text-emerald-400 text-xs' : 'text-slate-500 text-xs') : 'text-emerald-400'}`}>
+                        {displayB}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
