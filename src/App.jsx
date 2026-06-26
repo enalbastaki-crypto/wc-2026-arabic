@@ -1224,7 +1224,7 @@ function AdminView({ isAdmin, setIsAdmin, matches, settings, passcode, usersData
 }
 
 function PredictionsView({ matches, predictions, usersData }) {
-  // حالة (State) لحفظ المباراة المختارة من القائمة
+  // حالة لحفظ المباراة المختارة من القائمة
   const [selectedMatchId, setSelectedMatchId] = useState('');
   
   const now = new Date();
@@ -1236,18 +1236,17 @@ function PredictionsView({ matches, predictions, usersData }) {
       const matchDate = new Date(`${match.date}T${match.time}:00+03:00`);
       if (isNaN(matchDate)) return false;
       
-      // تغيير المدة لتصبح 12 ساعة بدلاً من ساعتين
       const twelveHoursLater = new Date(matchDate.getTime() + (12 * 60 * 60 * 1000));
       return now >= matchDate && now <= twelveHoursLater;
     } catch (e) { return false; }
   }).sort((a, b) => {
-    // 2. الترتيب من الأحدث (المباراة التي بدأت مؤخراً) إلى الأقدم
+    // الترتيب من الأحدث إلى الأقدم
     const dateA = new Date(`${a.date}T${a.time}:00+03:00`).getTime();
     const dateB = new Date(`${b.date}T${b.time}:00+03:00`).getTime();
     return dateB - dateA; 
   });
 
-  // 3. اختيار أحدث مباراة بشكل افتراضي عند تحميل الصفحة
+  // اختيار أحدث مباراة بشكل افتراضي عند تحميل الصفحة
   useEffect(() => {
     if (recentMatches.length > 0) {
       if (!selectedMatchId || !recentMatches.find(m => m.id === selectedMatchId)) {
@@ -1256,7 +1255,6 @@ function PredictionsView({ matches, predictions, usersData }) {
     }
   }, [recentMatches, selectedMatchId]);
 
-  // في حال لم تكن هناك أي مباريات ضمن نطاق الـ 12 ساعة
   if (recentMatches.length === 0) {
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-12 text-center text-slate-400 shadow-md">
@@ -1267,8 +1265,9 @@ function PredictionsView({ matches, predictions, usersData }) {
     );
   }
 
-  // المباراة التي سيتم عرض جدولها حالياً
+  // المباراة المختارة حالياً والتحقق مما إذا كانت منتهية (مسجلة النتيجة)
   const selectedMatch = recentMatches.find(m => m.id === selectedMatchId) || recentMatches[0];
+  const isCompleted = selectedMatch.actualA !== null && selectedMatch.actualA !== undefined && !isNaN(selectedMatch.actualA);
   
   let displayDate = selectedMatch.date;
   try {
@@ -1285,7 +1284,7 @@ function PredictionsView({ matches, predictions, usersData }) {
         <p className="text-xs text-slate-400">يمكنك هنا رؤية توقعات الجميع للمباريات التي بدأت خلال آخر 12 ساعة.</p>
       </div>
 
-      {/* 4. القائمة المنسدلة لاختيار المباراة */}
+      {/* القائمة المنسدلة لاختيار المباراة */}
       <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
         <label className="block text-sm font-bold text-slate-400 mb-2">اختر المباراة لمشاهدة التوقعات:</label>
         <select 
@@ -1301,7 +1300,7 @@ function PredictionsView({ matches, predictions, usersData }) {
         </select>
       </div>
       
-      {/* 5. جدول المباراة المختارة فقط */}
+      {/* جدول التوقعات للمباريات */}
       {selectedMatch && (
         <div className="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700 mb-6">
           <div className="bg-slate-900 p-4 border-b border-slate-700 text-center">
@@ -1316,6 +1315,7 @@ function PredictionsView({ matches, predictions, usersData }) {
                   <th className="p-3 text-right">اسم المشارك</th>
                   <th className="p-3 text-center">{selectedMatch.teamA}</th>
                   <th className="p-3 text-center">{selectedMatch.teamB}</th>
+                  <th className="p-3 text-center w-24">النقاط</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50 text-white">
@@ -1325,6 +1325,7 @@ function PredictionsView({ matches, predictions, usersData }) {
                   let displayA = '-';
                   let displayB = '-';
                   let isPkText = false;
+                  let earnedPoints = null;
 
                   if (pred) {
                     if (pred.isPk) {
@@ -1335,6 +1336,28 @@ function PredictionsView({ matches, predictions, usersData }) {
                       displayA = pred.scoreA;
                       displayB = pred.scoreB;
                     }
+
+                    // حساب نقاط هذا التوقع فقط إذا كانت الإدارة قد أدخلت النتيجة النهائية للمباراة
+                    if (isCompleted) {
+                      if (!selectedMatch.isPk && !pred.isPk) {
+                        const pA = parseInt(pred.scoreA); const pB = parseInt(pred.scoreB);
+                        const aA = parseInt(selectedMatch.actualA); const aB = parseInt(selectedMatch.actualB);
+                        if (pA === aA && pB === aB) earnedPoints = 3;
+                        else if ((pA > pB && aA > aB) || (pA < pB && aA < aB) || (pA === pB && aA === aB)) earnedPoints = 1;
+                        else earnedPoints = 0;
+                      } else if (selectedMatch.isPk && pred.isPk) {
+                        if (selectedMatch.pkWinner === pred.pkWinner) earnedPoints = 3;
+                        else earnedPoints = 0;
+                      } else {
+                        const actualWinner = selectedMatch.isPk ? selectedMatch.pkWinner : (parseInt(selectedMatch.actualA) > parseInt(selectedMatch.actualB) ? 'A' : 'B');
+                        const predWinner = pred.isPk ? pred.pkWinner : (parseInt(pred.scoreA) > parseInt(pred.scoreB) ? 'A' : 'B');
+                        if (actualWinner === predWinner) earnedPoints = 1;
+                        else earnedPoints = 0;
+                      }
+                    }
+                  } else {
+                    // إذا انتهت المباراة والمشارك لم يضع توقعاً يحصل على 0
+                    if (isCompleted) earnedPoints = 0;
                   }
                   
                   return (
@@ -1345,6 +1368,16 @@ function PredictionsView({ matches, predictions, usersData }) {
                       </td>
                       <td className={`p-3 font-bold ${isPkText ? (pred?.pkWinner === 'B' ? 'text-emerald-400 text-xs' : 'text-slate-500 text-xs') : 'text-emerald-400'}`}>
                         {displayB}
+                      </td>
+                      {/* عمود النقاط الرابع المضاف حديثاً بجمالياته اللوحية */}
+                      <td className="p-3 text-center font-bold">
+                        {earnedPoints !== null ? (
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded inline-block min-w-[38px] ${earnedPoints === 3 ? 'bg-emerald-500/20 text-emerald-400' : earnedPoints === 1 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400'}`}>
+                            +{earnedPoints}
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 font-medium">-</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -1357,5 +1390,6 @@ function PredictionsView({ matches, predictions, usersData }) {
     </div>
   );
 }
+
 
 
