@@ -539,7 +539,7 @@ function MatchesView({ matches, predictions, profileId }) {
     const isCompleted = match.actualA !== null && match.actualA !== undefined && !isNaN(match.actualA);
     if (!isCompleted) return null;
     
-    // FIX 1 APPLIED HERE
+    // تأكيد ربط التوقع بحساب المستخدم لتفادي تداخل البيانات
     const userPred = predictions.find(p => p.matchId === match.id && p.profileId === profileId);
     
     if (!userPred) return 0;
@@ -560,6 +560,9 @@ function MatchesView({ matches, predictions, profileId }) {
     return earnedPoints;
   };
 
+  // 1. حساب عدد الفلاتر المتقدمة النشطة قبل تطبيق التصفية
+  const activeFiltersCount = advFilters.time.length + advFilters.team.length + advFilters.stage.length + advFilters.points.length;
+
   const filteredMatches = matches.filter(match => {
     const isCompleted = match.actualA !== null && match.actualA !== undefined && !isNaN(match.actualA);
     const isPastKickoff = isMatchStarted(match.date, match.time);
@@ -567,9 +570,13 @@ function MatchesView({ matches, predictions, profileId }) {
     const today = new Date().toDateString();
     const matchDateStr = new Date(match.date).toDateString();
 
-    if (filter === 'active' && (isCompleted || isOngoing)) return false;
-    if (filter === 'today' && today !== matchDateStr) return false;
+    // 2. الفلتر السريع: يتم تجاهله إذا كانت النافذة منبثقة مفتوحة أو الفلتر المتقدم نشطاً
+    if (!isFilterOpen && activeFiltersCount === 0) {
+      if (filter === 'active' && (isCompleted || isOngoing)) return false;
+      if (filter === 'today' && today !== matchDateStr) return false;
+    }
 
+    // 3. الفلتر المتقدم
     if (advFilters.time.length > 0) {
       let matchesTime = false;
       if (advFilters.time.includes('جارية') && isOngoing) matchesTime = true;
@@ -615,8 +622,6 @@ function MatchesView({ matches, predictions, profileId }) {
       return new Intl.DateTimeFormat('ar-BH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(dObj);
     } catch(e) { return dateStr; }
   };
-
-  const activeFiltersCount = advFilters.time.length + advFilters.team.length + advFilters.stage.length + advFilters.points.length;
 
   const handleQuickFilter = (f) => {
     setFilter(f);
@@ -799,7 +804,7 @@ function MatchesView({ matches, predictions, profileId }) {
               </div>
               <div className="space-y-4">
                 {groupedMatches[date].map(match => {
-                  // FIX 2 APPLIED HERE
+                  // التأكيد على profileId لعدم تداخل البطاقات
                   const userPred = predictions.find(p => p.matchId === match.id && p.profileId === profileId);
                   return <MatchCard key={match.id} match={match} userPred={userPred} profileId={profileId} />;
                 })}
@@ -815,14 +820,6 @@ function MatchesView({ matches, predictions, profileId }) {
     </div>
   );
 }
-
-
-
-
-
-
-
-
 
 function MatchCard({ match, userPred, profileId }) {
   const [scoreA, setScoreA] = useState(userPred?.scoreA ?? '');
