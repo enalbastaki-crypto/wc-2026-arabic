@@ -538,7 +538,10 @@ function MatchesView({ matches, predictions, profileId }) {
   const getMatchPointsForFilter = (match) => {
     const isCompleted = match.actualA !== null && match.actualA !== undefined && !isNaN(match.actualA);
     if (!isCompleted) return null;
-    const userPred = predictions.find(p => p.matchId === match.id);
+    
+    // FIX 1 APPLIED HERE
+    const userPred = predictions.find(p => p.matchId === match.id && p.profileId === profileId);
+    
     if (!userPred) return 0;
 
     let earnedPoints = 0;
@@ -564,11 +567,9 @@ function MatchesView({ matches, predictions, profileId }) {
     const today = new Date().toDateString();
     const matchDateStr = new Date(match.date).toDateString();
 
-    // 1. الفلتر السريع
     if (filter === 'active' && (isCompleted || isOngoing)) return false;
     if (filter === 'today' && today !== matchDateStr) return false;
 
-    // 2. الفلتر المتقدم 
     if (advFilters.time.length > 0) {
       let matchesTime = false;
       if (advFilters.time.includes('جارية') && isOngoing) matchesTime = true;
@@ -798,7 +799,8 @@ function MatchesView({ matches, predictions, profileId }) {
               </div>
               <div className="space-y-4">
                 {groupedMatches[date].map(match => {
-                  const userPred = predictions.find(p => p.matchId === match.id);
+                  // FIX 2 APPLIED HERE
+                  const userPred = predictions.find(p => p.matchId === match.id && p.profileId === profileId);
                   return <MatchCard key={match.id} match={match} userPred={userPred} profileId={profileId} />;
                 })}
               </div>
@@ -813,6 +815,7 @@ function MatchesView({ matches, predictions, profileId }) {
     </div>
   );
 }
+
 
 
 
