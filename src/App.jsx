@@ -875,7 +875,7 @@ function MatchCard({ match, userPred, profileId }) {
     setSaving(false);
   };
 
-  const isCompleted = match.actualA !== null && match.actualA !== undefined && !isNaN(match.actualA);
+  const isCompleted = (match.actualA !== null && match.actualA !== undefined && match.actualA !== '') || match.isPk === true;
   const isPastKickoff = isMatchStarted(match.date, match.time);
   const isLockedForUser = match.isLocked || isCompleted || isPastKickoff;
 
@@ -1438,7 +1438,7 @@ function PredictionsView({ matches, predictions, usersData }) {
 
   // المباراة المختارة حالياً والتحقق مما إذا كانت منتهية (مسجلة النتيجة)
   const selectedMatch = recentMatches.find(m => m.id === selectedMatchId) || recentMatches[0];
-  const isCompleted = selectedMatch.actualA !== null && selectedMatch.actualA !== undefined && !isNaN(selectedMatch.actualA);
+  const isCompleted = (selectedMatch.actualA !== null && selectedMatch.actualA !== undefined && selectedMatch.actualA !== '') || selectedMatch.isPk === true;
   
   let displayDate = selectedMatch.date;
   try {
