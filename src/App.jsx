@@ -553,10 +553,35 @@ function MatchesView({ matches, predictions, profileId }) {
     } else if (match.isPk && userPred.isPk) {
       if (match.pkWinner === userPred.pkWinner) earnedPoints = 3;
     } else {
-      const actualWinner = match.isPk ? match.pkWinner : (parseInt(match.actualA) > parseInt(match.actualB) ? 'A' : 'B');
-      const predWinner = userPred.isPk ? userPred.pkWinner : (parseInt(userPred.scoreA) > parseInt(userPred.scoreB) ? 'A' : 'B');
-      if (actualWinner === predWinner) earnedPoints = 1;
+      // التحقق بشكل صريح من الفائز لمنع الفلتر المتقدم من قراءة التعادل القديم بشكل خاطئ
+      let actualWinner = null;
+      if (match.isPk) {
+        actualWinner = match.pkWinner;
+      } else {
+        const aA = parseInt(match.actualA);
+        const aB = parseInt(match.actualB);
+        if (aA > aB) actualWinner = 'A';
+        else if (aB > aA) actualWinner = 'B';
+      }
+    
+      let predWinner = null;
+      if (userPred.isPk) {
+        predWinner = userPred.pkWinner;
+      } else {
+        const pA = parseInt(userPred.scoreA);
+        const pB = parseInt(userPred.scoreB);
+        if (pA > pB) predWinner = 'A';
+        else if (pB > pA) predWinner = 'B';
+      }
+    
+      // احتساب النقطة فقط في حال وجود فائز حقيقي وتطابقه مع التوقع
+      if (actualWinner && predWinner && actualWinner === predWinner) {
+        earnedPoints = 1;
+      } else {
+        earnedPoints = 0;
+      }
     }
+    
     return earnedPoints;
   };
 
@@ -894,12 +919,33 @@ function MatchCard({ match, userPred, profileId }) {
       if (match.pkWinner === userPred.pkWinner) earnedPoints = 3;
       else earnedPoints = 0;
     } else {
-      // 3. أحدهما توقع ركلات ترجيح والآخر نتيجة عادية (في الأدوار الإقصائية)
-      const actualWinner = match.isPk ? match.pkWinner : (parseInt(match.actualA) > parseInt(match.actualB) ? 'A' : 'B');
-      const predWinner = userPred.isPk ? userPred.pkWinner : (parseInt(userPred.scoreA) > parseInt(userPred.scoreB) ? 'A' : 'B');
-      
-      if (actualWinner === predWinner) earnedPoints = 1;
-      else earnedPoints = 0;
+      // التحقق بشكل صريح من الفائز لتجنب احتساب التعادل القديم كفوز للفريق ب
+      let actualWinner = null;
+      if (match.isPk) {
+        actualWinner = match.pkWinner;
+      } else {
+        const aA = parseInt(match.actualA);
+        const aB = parseInt(match.actualB);
+        if (aA > aB) actualWinner = 'A';
+        else if (aB > aA) actualWinner = 'B';
+      }
+
+      let predWinner = null;
+      if (userPred.isPk) {
+        predWinner = userPred.pkWinner;
+      } else {
+        const pA = parseInt(userPred.scoreA);
+        const pB = parseInt(userPred.scoreB);
+        if (pA > pB) predWinner = 'A';
+        else if (pB > pA) predWinner = 'B';
+      }
+
+      // منح النقطة فقط إذا كان هناك فائز فعلي وتطابق مع التوقع
+      if (actualWinner && predWinner && actualWinner === predWinner) {
+        earnedPoints = 1;
+      } else {
+        earnedPoints = 0;
+      }
     }
   }
 
@@ -1539,11 +1585,34 @@ function PredictionsView({ matches, predictions, usersData }) {
                         if (selectedMatch.pkWinner === pred.pkWinner) earnedPoints = 3;
                         else earnedPoints = 0;
                       } else {
-                        const actualWinner = selectedMatch.isPk ? selectedMatch.pkWinner : (parseInt(selectedMatch.actualA) > parseInt(selectedMatch.actualB) ? 'A' : 'B');
-                        const predWinner = pred.isPk ? pred.pkWinner : (parseInt(pred.scoreA) > parseInt(pred.scoreB) ? 'A' : 'B');
-                        if (actualWinner === predWinner) earnedPoints = 1;
-                        else earnedPoints = 0;
-                      }
+                        // التحقق بشكل صريح من الفائز لتجنب احتساب التعادل القديم كفوز للفريق ب
+                        let actualWinner = null;
+                        if (selectedMatch.isPk) {
+                          actualWinner = selectedMatch.pkWinner;
+                        } else {
+                          const aA = parseInt(selectedMatch.actualA);
+                          const aB = parseInt(selectedMatch.actualB);
+                          if (aA > aB) actualWinner = 'A';
+                          else if (aB > aA) actualWinner = 'B';
+                        }
+                      
+                        let predWinner = null;
+                        if (pred.isPk) {
+                          predWinner = pred.pkWinner;
+                        } else {
+                          const pA = parseInt(pred.scoreA);
+                          const pB = parseInt(pred.scoreB);
+                          if (pA > pB) predWinner = 'A';
+                          else if (pB > pA) predWinner = 'B';
+                        }
+                      
+                        // منح النقطة فقط إذا كان هناك فائز فعلي (ليس تعادلاً) وتطابق مع التوقع
+                        if (actualWinner && predWinner && actualWinner === predWinner) {
+                          earnedPoints = 1;
+                        } else {
+                          earnedPoints = 0;
+                        }
+                      }                      
                     }
                   } else {
                     // إذا انتهت المباراة والمشارك لم يضع توقعاً يحصل على 0
