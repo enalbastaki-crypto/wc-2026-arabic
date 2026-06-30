@@ -536,7 +536,7 @@ function MatchesView({ matches, predictions, profileId }) {
   const stages = ['دور المجموعات', 'دور الـ 32', 'دور الـ 16', 'ربع النهائي', 'نصف النهائي', 'المركز الثالث', 'النهائي'];
 
   const getMatchPointsForFilter = (match) => {
-    const isCompleted = match.actualA !== null && match.actualA !== undefined && !isNaN(match.actualA);
+    const isCompleted = (match.actualA !== null && match.actualA !== undefined && match.actualA !== '') || match.isPk === true;
     if (!isCompleted) return null;
     
     // تأكيد ربط التوقع بحساب المستخدم لتفادي تداخل البيانات
@@ -564,7 +564,7 @@ function MatchesView({ matches, predictions, profileId }) {
   const activeFiltersCount = advFilters.time.length + advFilters.team.length + advFilters.stage.length + advFilters.points.length;
 
   const filteredMatches = matches.filter(match => {
-    const isCompleted = match.actualA !== null && match.actualA !== undefined && !isNaN(match.actualA);
+    const isCompleted = (match.actualA !== null && match.actualA !== undefined && match.actualA !== '') || match.isPk === true;
     const isPastKickoff = isMatchStarted(match.date, match.time);
     const isOngoing = isPastKickoff && !isCompleted;
     const today = new Date().toDateString();
