@@ -633,12 +633,27 @@ function MatchesView({ matches, predictions, profileId }) {
     return true;
   });
 
-  const groupedMatches = filteredMatches.reduce((groups, match) => {
+  // 🌟 التعديل الجديد: ترتيب المباريات زمنياً (حسب التاريخ ثم الوقت) قبل عرضها
+  const sortedMatches = [...filteredMatches].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    
+    // إذا كانت المباريات في نفس اليوم، رتبها حسب الوقت (الأقدم فالأحدث)
+    if (dateA === dateB) {
+      return a.time.localeCompare(b.time);
+    }
+    // ترتيب الأيام من الأقدم للأحدث
+    return dateA - dateB;
+  });
+
+  // تجميع المباريات بعد أن تم ترتيبها بشكل صحيح
+  const groupedMatches = sortedMatches.reduce((groups, match) => {
     const date = match.date;
     if (!groups[date]) groups[date] = [];
     groups[date].push(match);
     return groups;
   }, {});
+
 
   const formatDate = (dateStr) => {
     try {
